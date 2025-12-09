@@ -86,6 +86,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if e := recover(); e != nil {
 				s.OnPanic(c, e)
+				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			}
 		}()
 		if s.group != nil && !s.group.Allow(c.GetIP()) {
