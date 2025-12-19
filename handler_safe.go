@@ -2,8 +2,6 @@ package server
 
 import (
 	"log"
-
-	"github.com/oxzjh/server/auth"
 )
 
 type SafeHandler struct {
@@ -23,8 +21,4 @@ func (sh *SafeHandler) OnClose(socket ISocket) {
 	} else {
 		sh.CloseC <- socket
 	}
-}
-
-func NewSafeHandler(a auth.IAuth, connectC, closeC chan ISocket) *SafeHandler {
-	return &SafeHandler{Handler{auth: a}, connectC, closeC}
 }

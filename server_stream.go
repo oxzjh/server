@@ -2,44 +2,48 @@ package server
 
 type StreamServer struct {
 	Server
-	Maker func(int) []byte
+	maker func(int) []byte
 }
 
-func (s *StreamServer) Send(socket ISocket, data []byte) {
-	socket.Write(s.Maker(len(data)))
+func (s *StreamServer) Send(socket ISocket, resp IResponse) {
+	data := resp.GetData()
+	socket.Write(s.maker(len(data)))
 	socket.Write(data)
 }
 
-func (s *StreamServer) SendToAll(ids []uint64, data []byte) {
-	head := s.Maker(len(data))
+func (s *StreamServer) SendToAll(ids []uint64, resp IResponse) {
+	data := resp.GetData()
+	head := s.maker(len(data))
 	s.RLock()
 	defer s.RUnlock()
 	for _, id := range ids {
-		if socket, ok := s.Sockets[id]; ok {
+		if socket, ok := s.sockets[id]; ok {
 			socket.Write(head)
 			socket.Write(data)
 		}
 	}
 }
 
-func (s *StreamServer) Broadcast(data []byte) {
-	head := s.Maker(len(data))
+func (s *StreamServer) SendToRoom(rid uint64, resp IResponse, except uint64) {
+	data := resp.GetData()
+	head := s.maker(len(data))
 	s.RLock()
 	defer s.RUnlock()
-	for _, socket := range s.Sockets {
-		socket.Write(head)
-		socket.Write(data)
-	}
-}
-
-func (s *StreamServer) SendToRoom(rid uint64, data []byte, except uint64) {
-	head := s.Maker(len(data))
-	s.RLock()
-	defer s.RUnlock()
-	for _, socket := range s.Sockets {
+	for _, socket := range s.sockets {
 		if socket.GetRid() == rid && socket.GetId() != except {
 			socket.Write(head)
 			socket.Write(data)
 		}
+	}
+}
+
+func (s *StreamServer) Broadcast(resp IResponse) {
+	data := resp.GetData()
+	head := s.maker(len(data))
+	s.RLock()
+	defer s.RUnlock()
+	for _, socket := range s.sockets {
+		socket.Write(head)
+		socket.Write(data)
 	}
 }
