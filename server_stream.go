@@ -1,5 +1,9 @@
 package server
 
+import (
+	"github.com/oxzjh/server/auth"
+)
+
 type StreamServer struct {
 	Server
 	maker func(int) []byte
@@ -46,4 +50,8 @@ func (s *StreamServer) Broadcast(resp IResponse) {
 		socket.Write(head)
 		socket.Write(data)
 	}
+}
+
+func NewStreamServer(a auth.IAuth, h IHandler, maker func(int) []byte) *StreamServer {
+	return &StreamServer{*New(a, h), maker}
 }

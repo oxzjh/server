@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"log"
 	"sync"
 	"time"
@@ -23,6 +24,7 @@ type IServer interface {
 	Broadcast(IResponse)
 	SendToRoom(uint64, IResponse, uint64)
 	Close()
+	Serve(string) error
 }
 
 type Server struct {
@@ -128,21 +130,20 @@ func (s *Server) Close() {
 	}
 }
 
-func (s *Server) GetSlowDuration(t time.Time) time.Duration {
-	if s.slow > 0 {
-		if dt := time.Since(t); dt > s.slow {
-			return dt
-		}
-	}
-	return 0
-}
-
-func (s *Server) IsLimited(socket ISocket) bool {
-	return s.group != nil && !s.group.Allow(socket.GetRemoteIP())
-}
-
 func (s *Server) Upgrade(message string) (uint64, error) {
 	return s.a.ParseUintToken(message)
+}
+
+func (s *Server) UpgradeSocket(socket ISocket, message []byte) error {
+	id, err := s.Upgrade(string(message))
+	if err != nil {
+		return err
+	}
+	if id == 0 {
+		return errors.New("invalid id")
+	}
+	s.AddSocket(socket, id)
+	return nil
 }
 
 func (s *Server) AddSocket(socket ISocket, id uint64) {
@@ -157,23 +158,21 @@ func (s *Server) AddSocket(socket ISocket, id uint64) {
 	s.h.OnConnect(socket)
 }
 
-func (s *Server) HandleMessage(socket ISocket, message []byte) {
-	if resp := s.h.OnMessage(socket, message); resp != nil {
-		s.Send(socket, resp)
+func (s *Server) OnMessage(socket ISocket, message []byte, sender func(ISocket, IResponse)) {
+	if s.group != nil && !s.group.Allow(socket.GetRemoteIP()) {
+		s.h.OnError(socket, "rate limited")
+		return
 	}
-}
 
-func (s *Server) OnMessage(socket ISocket, message []byte) {
-	if socket.GetId() == 0 {
-		id, err := s.Upgrade(string(message))
-		if id == 0 || err != nil {
-			log.Println("UPGRADE:", socket.GetRemoteAddr(), err)
-			socket.Close()
-			return
+	t := time.Now()
+	resp, method := s.h.OnMessage(socket, message)
+	if s.slow > 0 {
+		if dt := time.Since(t); dt > s.slow {
+			log.Println("SLOW:", method, dt)
 		}
-		s.AddSocket(socket, id)
-	} else {
-		s.HandleMessage(socket, message)
+	}
+	if resp != nil {
+		sender(socket, resp)
 	}
 }
 

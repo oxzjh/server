@@ -17,17 +17,17 @@ type socket struct {
 	remoteIP   string
 }
 
-func (s *socket) read(svr *Server) {
+func (s *socket) read(ws *wsServer) {
 	for {
-		if svr.Timeout > 0 {
-			s.conn.SetReadDeadline(time.Now().Add(svr.Timeout))
+		if ws.opts.timeout > 0 {
+			s.conn.SetReadDeadline(time.Now().Add(ws.opts.timeout))
 		}
 		_, message, err := s.conn.ReadMessage()
 		if err != nil {
-			svr.CloseSocket(s)
+			ws.CloseSocket(s)
 			return
 		}
-		svr.OnMessage(s, message)
+		ws.OnMessage(s, message, ws.Send)
 	}
 }
 

@@ -6,9 +6,10 @@ import (
 
 type IHandler interface {
 	OnConnect(ISocket)
-	OnMessage(ISocket, []byte) IResponse
+	OnMessage(ISocket, []byte) (IResponse, any)
 	OnLogout(ISocket)
 	OnClose(ISocket)
+	OnError(ISocket, string)
 }
 
 type Handler struct{}
@@ -25,4 +26,8 @@ func (*Handler) OnClose(socket ISocket) {
 	if socket.GetId() == 0 {
 		log.Println("CLOSE:", socket.GetRemoteAddr(), "0")
 	}
+}
+
+func (*Handler) OnError(socket ISocket, err string) {
+	log.Println("ERROR:", socket.GetRemoteAddr(), socket.GetId(), err)
 }
