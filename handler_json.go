@@ -33,7 +33,7 @@ func (jh *JsonHandler) OnMessage(socket ISocket, message []byte) (IResponse, any
 	h, ok := jh.register[req.Method]
 	if !ok {
 		jh.OnError(socket, "unregistered method: "+req.Method)
-		return nil, nil
+		return nil, req.Method
 	}
 
 	if jh.OnSuccess != nil {
