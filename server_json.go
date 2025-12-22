@@ -1,7 +1,7 @@
 package server
 
 type IJsonRouter interface {
-	IServer
+	IHandler
 	Reg(string, func(ISocket, Map) IJsonResponse)
 }
 

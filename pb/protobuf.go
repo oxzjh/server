@@ -8,7 +8,7 @@ import (
 )
 
 type IProtobufRouter interface {
-	server.IServer
+	server.IHandler
 	Reg(IProtobuf, func(server.ISocket, IProtobuf) IProtobuf)
 }
 
