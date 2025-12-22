@@ -7,6 +7,11 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+type IProtobufRouter interface {
+	server.IServer
+	Reg(IProtobuf, func(server.ISocket, IProtobuf) IProtobuf)
+}
+
 type IProtobuf interface {
 	proto.Message
 	GetProtocol() int16

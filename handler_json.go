@@ -6,11 +6,6 @@ import (
 	"runtime/debug"
 )
 
-type jsonRequest struct {
-	Method string `json:"method"`
-	Data   Map    `json:"data,omitempty"`
-}
-
 type JsonHandler struct {
 	Handler
 	OnPanic   func(ISocket, string, any)
