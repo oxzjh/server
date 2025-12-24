@@ -12,16 +12,14 @@ import (
 	"github.com/oxzjh/server/rate"
 )
 
-type Handler func(*Context) IResponse
-
-type Server struct {
-	Timeout      time.Duration
-	Domains      []string
-	AllowHeaders string
-	MaxLength    int64
-	OnNotFound   http.HandlerFunc
-	OnPanic      func(*Context, any)
-	Middleware   Handler
+type httpServer struct {
+	timeout      time.Duration
+	domains      []string
+	allowHeaders string
+	maxLength    int64
+	onNotFound   http.HandlerFunc
+	onPanic      func(*Context, any)
+	middleware   Handler
 	cert         string
 	key          string
 	group        *rate.Group
@@ -30,40 +28,23 @@ type Server struct {
 	handlers     map[string]Handler
 }
 
-func (s *Server) SetTLS(cert, key string) {
-	s.cert = cert
-	s.key = key
-}
-
-func (s *Server) SetRate(limit time.Duration, burst int) {
-	s.group = rate.NewGroup(limit, burst)
-}
-
-func (s *Server) SetAuth(a auth.IAuth, ignoreRoutes []string) {
-	s.auth = a
-	s.authIgnores = make(map[string]struct{}, len(ignoreRoutes))
-	for _, route := range ignoreRoutes {
-		s.authIgnores[route] = struct{}{}
-	}
-}
-
-func (s *Server) Reg(route string, handler Handler) {
+func (s *httpServer) Reg(route string, handler Handler) {
 	if _, ok := s.handlers[route]; ok {
 		panic("duplicate register route: " + route)
 	}
 	s.handlers[route] = handler
 }
 
-func (s *Server) Set(route string, handler Handler) {
+func (s *httpServer) Set(route string, handler Handler) {
 	s.handlers[route] = handler
 }
 
-func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if s.Domains != nil {
-		if len(s.Domains) == 1 {
-			w.Header().Set("Access-Control-Allow-Origin", s.Domains[0])
+func (s *httpServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if s.domains != nil {
+		if len(s.domains) == 1 {
+			w.Header().Set("Access-Control-Allow-Origin", s.domains[0])
 		} else if origin := r.Header.Get("Origin"); origin != "" {
-			for _, domain := range s.Domains {
+			for _, domain := range s.domains {
 				if domain == origin {
 					w.Header().Set("Access-Control-Allow-Origin", domain)
 					break
@@ -71,13 +52,13 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	if s.AllowHeaders != "" {
-		w.Header().Set("Access-Control-Allow-Headers", s.AllowHeaders)
+	if s.allowHeaders != "" {
+		w.Header().Set("Access-Control-Allow-Headers", s.allowHeaders)
 	}
 	if r.Method == http.MethodOptions {
 		return
 	}
-	if r.ContentLength > s.MaxLength {
+	if r.ContentLength > s.maxLength {
 		http.Error(w, http.StatusText(http.StatusRequestEntityTooLarge), http.StatusRequestEntityTooLarge)
 		return
 	}
@@ -85,7 +66,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		c := &Context{Request: r}
 		defer func() {
 			if e := recover(); e != nil {
-				s.OnPanic(c, e)
+				s.onPanic(c, e)
 				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			}
 		}()
@@ -112,8 +93,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		var response IResponse
-		if s.Middleware != nil {
-			response = s.Middleware(c)
+		if s.middleware != nil {
+			response = s.middleware(c)
 		}
 		if response == nil {
 			if c.Parser == nil {
@@ -143,12 +124,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		log.Println(getIP(r), r.RequestURI, "NOT FOUND")
-		s.OnNotFound(w, r)
+		s.onNotFound(w, r)
 	}
 }
 
-func (s *Server) Serve(addr string) error {
-	svr := &http.Server{Addr: addr, Handler: s, ReadHeaderTimeout: s.Timeout}
+func (s *httpServer) Serve(addr string) error {
+	svr := &http.Server{Addr: addr, Handler: s, ReadHeaderTimeout: s.timeout}
 	if s.cert != "" && s.key != "" {
 		fmt.Println("Serve HTTPS on", addr)
 		return svr.ListenAndServeTLS(s.cert, s.key)
@@ -157,15 +138,19 @@ func (s *Server) Serve(addr string) error {
 	return svr.ListenAndServe()
 }
 
-func NewServer() *Server {
-	return &Server{
-		Timeout:    5 * time.Second,
-		MaxLength:  0xFFFF,
-		OnNotFound: http.NotFound,
-		OnPanic: func(c *Context, e any) {
+func NewServer(opts ...Option) IServer {
+	s := &httpServer{
+		timeout:    5 * time.Second,
+		maxLength:  0xFFFF,
+		onNotFound: http.NotFound,
+		onPanic: func(c *Context, e any) {
 			log.Println(getIP(c.Request), c.Request.RequestURI, e)
 			log.Writer().Write(debug.Stack())
 		},
 		handlers: map[string]Handler{},
 	}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
 }
