@@ -17,7 +17,7 @@ type socket struct {
 
 func (s *socket) read(ts *tcpServer) {
 	s.conn.SetReadDeadline(time.Now().Add(ts.opts.connTimeout))
-	message, err := ts.opts.parser(s.conn)
+	message, err := ts.opts.parser.Parse(s.conn)
 	if err == nil {
 		err = ts.UpgradeSocket(s, message)
 	}
@@ -27,7 +27,7 @@ func (s *socket) read(ts *tcpServer) {
 		return
 	}
 	for {
-		message, err := ts.opts.parser(s.conn)
+		message, err := ts.opts.parser.Parse(s.conn)
 		if err != nil {
 			ts.CloseSocket(s)
 			return

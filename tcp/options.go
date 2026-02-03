@@ -1,15 +1,16 @@
 package tcp
 
 import (
-	"io"
 	"time"
+
+	"github.com/oxzjh/stream"
 )
 
 type options struct {
 	connTimeout time.Duration
 	timeout     time.Duration
-	parser      func(io.Reader) ([]byte, error)
-	maker       func(int) []byte
+	parser      stream.IParser
+	maker       stream.IMaker
 }
 
 type Option func(*options)
@@ -26,13 +27,13 @@ func WithTimeout(timeout time.Duration) Option {
 	}
 }
 
-func WithParser(parser func(io.Reader) ([]byte, error)) Option {
+func WithParser(parser stream.IParser) Option {
 	return func(o *options) {
 		o.parser = parser
 	}
 }
 
-func WithMaker(maker func(int) []byte) Option {
+func WithMaker(maker stream.IMaker) Option {
 	return func(o *options) {
 		o.maker = maker
 	}

@@ -2,22 +2,23 @@ package server
 
 import (
 	"github.com/oxzjh/server/auth"
+	"github.com/oxzjh/stream"
 )
 
 type StreamServer struct {
 	Server
-	maker func(int) []byte
+	maker stream.IMaker
 }
 
 func (s *StreamServer) Send(socket ISocket, resp IResponse) {
 	data := resp.GetData()
-	socket.Write(s.maker(len(data)))
+	socket.Write(s.maker.Make(len(data)))
 	socket.Write(data)
 }
 
 func (s *StreamServer) SendToAll(ids []uint64, resp IResponse) {
 	data := resp.GetData()
-	head := s.maker(len(data))
+	head := s.maker.Make(len(data))
 	s.RLock()
 	defer s.RUnlock()
 	for _, id := range ids {
@@ -30,7 +31,7 @@ func (s *StreamServer) SendToAll(ids []uint64, resp IResponse) {
 
 func (s *StreamServer) SendToRoom(rid uint64, resp IResponse, except uint64) {
 	data := resp.GetData()
-	head := s.maker(len(data))
+	head := s.maker.Make(len(data))
 	s.RLock()
 	defer s.RUnlock()
 	for _, socket := range s.sockets {
@@ -43,7 +44,7 @@ func (s *StreamServer) SendToRoom(rid uint64, resp IResponse, except uint64) {
 
 func (s *StreamServer) Broadcast(resp IResponse) {
 	data := resp.GetData()
-	head := s.maker(len(data))
+	head := s.maker.Make(len(data))
 	s.RLock()
 	defer s.RUnlock()
 	for _, socket := range s.sockets {
@@ -52,6 +53,6 @@ func (s *StreamServer) Broadcast(resp IResponse) {
 	}
 }
 
-func NewStreamServer(a auth.IAuth, h IHandler, maker func(int) []byte) *StreamServer {
+func NewStreamServer(a auth.IAuth, h IHandler, maker stream.IMaker) *StreamServer {
 	return &StreamServer{*New(a, h), maker}
 }

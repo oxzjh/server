@@ -3,6 +3,7 @@ package http
 import (
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"runtime/debug"
 	"strings"
@@ -72,7 +73,7 @@ func (s *httpServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}()
 		if s.group != nil && !s.group.Allow(c.GetIP()) {
 			log.Println(c.GetIP(), r.RequestURI, "LIMITED")
-			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+			http.Error(w, http.StatusText(http.StatusTooManyRequests), http.StatusTooManyRequests)
 			return
 		}
 		if s.auth != nil {
@@ -128,7 +129,17 @@ func (s *httpServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *httpServer) Serve(addr string) error {
+func (s *httpServer) Serve(l net.Listener) error {
+	svr := &http.Server{Handler: s, ReadTimeout: s.timeout}
+	if s.cert != "" && s.key != "" {
+		fmt.Println("Serve HTTPS on", l.Addr())
+		return svr.ServeTLS(l, s.cert, s.key)
+	}
+	fmt.Println("Serve HTTP on", l.Addr())
+	return svr.Serve(l)
+}
+
+func (s *httpServer) ListenAndServe(addr string) error {
 	svr := &http.Server{Addr: addr, Handler: s, ReadHeaderTimeout: s.timeout}
 	if s.cert != "" && s.key != "" {
 		fmt.Println("Serve HTTPS on", addr)

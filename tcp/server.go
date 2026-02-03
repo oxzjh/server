@@ -6,6 +6,7 @@ import (
 
 	"github.com/oxzjh/server"
 	"github.com/oxzjh/server/auth"
+	"github.com/oxzjh/stream"
 )
 
 type tcpServer struct {
@@ -38,8 +39,8 @@ func NewServer(a auth.IAuth, h server.IHandler, opts ...Option) server.IServer {
 	os := &options{
 		connTimeout: 5 * time.Second,
 		timeout:     5 * time.Minute,
-		parser:      server.ParseStream,
-		maker:       server.MakeStream4,
+		parser:      stream.NewParser(0x92),
+		maker:       stream.NewSimpleMaker(4),
 	}
 	for _, opt := range opts {
 		opt(os)
