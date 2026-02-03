@@ -13,6 +13,7 @@ type Context struct {
 	Data    server.Map
 	Request *http.Request
 	Parser  Handler
+	Extra   any
 	ip      string
 }
 
