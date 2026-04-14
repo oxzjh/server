@@ -9,6 +9,9 @@ import (
 func NewReverse(targets map[string]string, errorHandler func(http.ResponseWriter, *http.Request, error)) http.Handler {
 	return &httputil.ReverseProxy{
 		Director: func(r *http.Request) {
+			if r.TLS != nil {
+				r.Header.Set("X-Forwarded-Proto", "https")
+			}
 			r.URL.Scheme = "http"
 			r.URL.Host = targets[r.Host]
 		},
@@ -19,6 +22,9 @@ func NewReverse(targets map[string]string, errorHandler func(http.ResponseWriter
 func NewRouter(defaultHost string, targets map[string]string, errorHandler func(http.ResponseWriter, *http.Request, error)) http.Handler {
 	return &httputil.ReverseProxy{
 		Director: func(r *http.Request) {
+			if r.TLS != nil {
+				r.Header.Set("X-Forwarded-Proto", "https")
+			}
 			r.URL.Scheme = "http"
 			for route, host := range targets {
 				if strings.HasPrefix(r.URL.Path, route) {
