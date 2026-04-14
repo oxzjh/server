@@ -3,11 +3,11 @@ package acme
 import (
 	"log"
 	"net/http"
-	"net/http/httputil"
 	"os"
 	"path/filepath"
 	"runtime"
 
+	"github.com/oxzjh/server/http/proxy"
 	"golang.org/x/crypto/acme/autocert"
 )
 
@@ -33,12 +33,7 @@ func Serve(targets map[string]string, opts ...Option) error {
 	} else {
 		m.Cache = autocert.DirCache(ops.cacheDir)
 	}
-	return http.Serve(m.Listener(), &httputil.ReverseProxy{
-		Director: func(r *http.Request) {
-
-		},
-		ErrorHandler: ops.errorHandler,
-	})
+	return http.Serve(m.Listener(), proxy.NewReverse(targets, ops.errorHandler))
 }
 
 func homeDir() string {
