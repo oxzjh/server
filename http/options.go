@@ -65,11 +65,11 @@ func WithRate(limit time.Duration, burst int) Option {
 	}
 }
 
-func WithAuth(a auth.IAuth, ignoreRoutes ...string) Option {
+func WithAuth(a auth.IAuth, ignores ...string) Option {
 	return func(s *httpServer) {
 		s.auth = a
-		s.authIgnores = make(map[string]struct{}, len(ignoreRoutes))
-		for _, route := range ignoreRoutes {
+		s.authIgnores = make(map[string]struct{}, len(ignores))
+		for _, route := range ignores {
 			s.authIgnores[route] = struct{}{}
 		}
 	}

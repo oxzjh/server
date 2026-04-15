@@ -40,6 +40,15 @@ func (s *httpServer) Set(route string, handler Handler) {
 	s.handlers[route] = handler
 }
 
+func (s *httpServer) AuthIgnore(ignores ...string) {
+	if s.authIgnores == nil {
+		s.authIgnores = make(map[string]struct{}, len(ignores))
+	}
+	for _, route := range ignores {
+		s.authIgnores[route] = struct{}{}
+	}
+}
+
 func (s *httpServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if s.domains != nil {
 		if len(s.domains) == 1 {
