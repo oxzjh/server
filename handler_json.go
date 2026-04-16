@@ -8,9 +8,10 @@ import (
 
 type JsonHandler struct {
 	Handler
-	OnPanic   func(ISocket, string, any)
-	OnSuccess func(ISocket, string, Map)
-	register  map[string]func(ISocket, Map) IJsonResponse
+	OnPanic    func(ISocket, string, any)
+	OnRequest  func(ISocket, string, Map)
+	OnResponse func(ISocket, string, IJsonResponse)
+	register   map[string]func(ISocket, Map) IJsonResponse
 }
 
 func (jh *JsonHandler) OnMessage(socket ISocket, message []byte) (IResponse, any) {
@@ -31,8 +32,8 @@ func (jh *JsonHandler) OnMessage(socket ISocket, message []byte) (IResponse, any
 		return nil, req.Method
 	}
 
-	if jh.OnSuccess != nil {
-		jh.OnSuccess(socket, req.Method, req.Data)
+	if jh.OnRequest != nil {
+		jh.OnRequest(socket, req.Method, req.Data)
 	}
 
 	defer func() {
@@ -41,6 +42,9 @@ func (jh *JsonHandler) OnMessage(socket ISocket, message []byte) (IResponse, any
 		}
 	}()
 	resp := h(socket, req.Data)
+	if jh.OnResponse != nil {
+		jh.OnResponse(socket, req.Method, resp)
+	}
 	if resp != nil {
 		resp.SetMethod(req.Method)
 	}
