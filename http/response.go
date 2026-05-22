@@ -1,14 +1,13 @@
 package http
 
 import (
-	"bytes"
 	"encoding/json"
 	"io"
 	"log"
 	"net/http"
 )
 
-type Interceptor func(r io.Reader, w http.ResponseWriter)
+type Interceptor func(b []byte, w http.ResponseWriter)
 
 var (
 	ReturnError bool
@@ -24,7 +23,7 @@ type ResponseBytes []byte
 
 func (r ResponseBytes) Write(w http.ResponseWriter, interceptor Interceptor) {
 	if interceptor != nil {
-		interceptor(bytes.NewReader(r), w)
+		interceptor(r, w)
 	} else {
 		w.Write(r)
 	}
@@ -34,7 +33,7 @@ type ResponseString string
 
 func (r ResponseString) Write(w http.ResponseWriter, interceptor Interceptor) {
 	if interceptor != nil {
-		interceptor(bytes.NewReader([]byte(r)), w)
+		interceptor([]byte(r), w)
 	} else {
 		w.Write([]byte(r))
 	}
@@ -45,7 +44,7 @@ type ResponseMap map[string]any
 func (r ResponseMap) Write(w http.ResponseWriter, interceptor Interceptor) {
 	if interceptor != nil {
 		b, _ := json.Marshal(r)
-		interceptor(bytes.NewReader(b), w)
+		interceptor(b, w)
 	} else {
 		json.NewEncoder(w).Encode(r)
 	}
@@ -59,7 +58,7 @@ type responseContent struct {
 func (r *responseContent) Write(w http.ResponseWriter, interceptor Interceptor) {
 	w.Header().Set("Content-Type", r.contentType)
 	if interceptor != nil {
-		interceptor(bytes.NewReader(r.content), w)
+		interceptor(r.content, w)
 	} else {
 		w.Write(r.content)
 	}
@@ -97,7 +96,7 @@ func (r *responseError) Write(w http.ResponseWriter, interceptor Interceptor) {
 	}
 	if interceptor != nil {
 		b, _ := json.Marshal(r)
-		interceptor(bytes.NewReader(b), w)
+		interceptor(b, w)
 	} else {
 		json.NewEncoder(w).Encode(r)
 	}
@@ -114,7 +113,7 @@ type responseJson struct {
 func (r *responseJson) Write(w http.ResponseWriter, interceptor Interceptor) {
 	if interceptor != nil {
 		b, _ := json.Marshal(r.data)
-		interceptor(bytes.NewReader(b), w)
+		interceptor(b, w)
 	} else {
 		json.NewEncoder(w).Encode(r.data)
 	}
@@ -141,12 +140,8 @@ type responsePipe struct {
 	rc io.ReadCloser
 }
 
-func (r *responsePipe) Write(w http.ResponseWriter, interceptor Interceptor) {
-	if interceptor != nil {
-		interceptor(r.rc, w)
-	} else {
-		io.Copy(w, r.rc)
-	}
+func (r *responsePipe) Write(w http.ResponseWriter, _ Interceptor) {
+	io.Copy(w, r.rc)
 	r.rc.Close()
 }
 
