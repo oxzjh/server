@@ -7,6 +7,8 @@ import (
 	"net/http"
 )
 
+type Interceptor func([]byte) []byte
+
 var (
 	ReturnError bool
 
@@ -14,25 +16,38 @@ var (
 )
 
 type IResponse interface {
-	Write(http.ResponseWriter)
+	Write(http.ResponseWriter, Interceptor)
 }
 
 type ResponseBytes []byte
 
-func (rb ResponseBytes) Write(w http.ResponseWriter) {
-	w.Write(rb)
+func (r ResponseBytes) Write(w http.ResponseWriter, interceptor Interceptor) {
+	if interceptor != nil {
+		w.Write(interceptor(r))
+	} else {
+		w.Write(r)
+	}
 }
 
 type ResponseString string
 
-func (rs ResponseString) Write(w http.ResponseWriter) {
-	w.Write([]byte(rs))
+func (r ResponseString) Write(w http.ResponseWriter, interceptor Interceptor) {
+	if interceptor != nil {
+		w.Write(interceptor([]byte(r)))
+	} else {
+		w.Write([]byte(r))
+	}
 }
 
 type ResponseMap map[string]any
 
-func (rm ResponseMap) Write(w http.ResponseWriter) {
-	json.NewEncoder(w).Encode(rm)
+func (r ResponseMap) Write(w http.ResponseWriter, interceptor Interceptor) {
+	if interceptor != nil {
+		b, _ := json.Marshal(r)
+		w.Write(interceptor(b))
+	} else {
+		json.NewEncoder(w).Encode(r)
+	}
 }
 
 type responseContent struct {
@@ -40,9 +55,13 @@ type responseContent struct {
 	content     []byte
 }
 
-func (rc *responseContent) Write(w http.ResponseWriter) {
-	w.Header().Set("Content-Type", rc.contentType)
-	w.Write(rc.content)
+func (r *responseContent) Write(w http.ResponseWriter, interceptor Interceptor) {
+	w.Header().Set("Content-Type", r.contentType)
+	if interceptor != nil {
+		w.Write(interceptor(r.content))
+	} else {
+		w.Write(r.content)
+	}
 }
 
 func NewContent(contentType string, content []byte) IResponse {
@@ -54,9 +73,9 @@ type responseStatus struct {
 	content string
 }
 
-func (rs *responseStatus) Write(w http.ResponseWriter) {
-	w.WriteHeader(rs.status)
-	w.Write([]byte(rs.content))
+func (r *responseStatus) Write(w http.ResponseWriter, _ Interceptor) {
+	w.WriteHeader(r.status)
+	w.Write([]byte(r.content))
 }
 
 func NewStatus(status int, content string) IResponse {
@@ -68,14 +87,19 @@ type responseError struct {
 	Err  string `json:"err,omitempty"`
 }
 
-func (re *responseError) Write(w http.ResponseWriter) {
+func (r *responseError) Write(w http.ResponseWriter, interceptor Interceptor) {
 	if EnableLog {
-		log.Println(re.Err)
+		log.Println(r.Err)
 	}
 	if !ReturnError {
-		re.Err = ""
+		r.Err = ""
 	}
-	json.NewEncoder(w).Encode(re)
+	if interceptor != nil {
+		b, _ := json.Marshal(r)
+		w.Write(interceptor(b))
+	} else {
+		json.NewEncoder(w).Encode(r)
+	}
 }
 
 func NewError(code int, err string) IResponse {
@@ -86,8 +110,13 @@ type responseJson struct {
 	data any
 }
 
-func (rj *responseJson) Write(w http.ResponseWriter) {
-	json.NewEncoder(w).Encode(rj.data)
+func (r *responseJson) Write(w http.ResponseWriter, interceptor Interceptor) {
+	if interceptor != nil {
+		b, _ := json.Marshal(r.data)
+		w.Write(interceptor(b))
+	} else {
+		json.NewEncoder(w).Encode(r.data)
+	}
 }
 
 func NewJson(data any) IResponse {
@@ -95,12 +124,12 @@ func NewJson(data any) IResponse {
 }
 
 type responseFile struct {
-	r    *http.Request
+	req  *http.Request
 	file string
 }
 
-func (rf *responseFile) Write(w http.ResponseWriter) {
-	http.ServeFile(w, rf.r, rf.file)
+func (r *responseFile) Write(w http.ResponseWriter, _ Interceptor) {
+	http.ServeFile(w, r.req, r.file)
 }
 
 func NewFile(r *http.Request, file string) IResponse {
@@ -111,9 +140,9 @@ type responsePipe struct {
 	rc io.ReadCloser
 }
 
-func (rp *responsePipe) Write(w http.ResponseWriter) {
-	io.Copy(w, rp.rc)
-	rp.rc.Close()
+func (r *responsePipe) Write(w http.ResponseWriter, _ Interceptor) {
+	io.Copy(w, r.rc)
+	r.rc.Close()
 }
 
 func NewPipe(rc io.ReadCloser) IResponse {
@@ -124,8 +153,8 @@ type responseCustom struct {
 	callback func(http.ResponseWriter)
 }
 
-func (rc *responseCustom) Write(w http.ResponseWriter) {
-	rc.callback(w)
+func (r *responseCustom) Write(w http.ResponseWriter, _ Interceptor) {
+	r.callback(w)
 }
 
 func NewCuston(callback func(http.ResponseWriter)) IResponse {

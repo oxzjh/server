@@ -21,6 +21,7 @@ type httpServer struct {
 	onNotFound   http.HandlerFunc
 	onPanic      func(*Context, any)
 	middleware   Handler
+	interceptor  Interceptor
 	cert         string
 	key          string
 	group        *rate.Group
@@ -130,7 +131,7 @@ func (s *httpServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			response = handler(c)
 		}
 		if response != nil {
-			response.Write(w)
+			response.Write(w, s.interceptor)
 		}
 	} else {
 		log.Println(getIP(r), r.RequestURI, "NOT FOUND")

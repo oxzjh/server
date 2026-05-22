@@ -52,6 +52,12 @@ func WithMiddleware(middleware Handler) Option {
 	}
 }
 
+func WithInterceptor(interceptor Interceptor) Option {
+	return func(s *httpServer) {
+		s.interceptor = interceptor
+	}
+}
+
 func WithTLS(cert, key string) Option {
 	return func(s *httpServer) {
 		s.cert = cert
