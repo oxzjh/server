@@ -5,8 +5,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-
-	"github.com/oxzjh/server"
 )
 
 var (
@@ -26,7 +24,6 @@ func ParseQuery(c *Context) IResponse {
 }
 
 func ParseJson(c *Context) IResponse {
-	c.Data = server.Map{}
 	if err := json.NewDecoder(c.Request.Body).Decode(&c.Data); err != nil {
 		log.Println(c.GetIP(), c.Request.RequestURI, err)
 		return NewStatus(http.StatusBadRequest, err.Error())
