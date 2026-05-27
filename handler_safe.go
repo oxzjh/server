@@ -11,13 +11,12 @@ type SafeHandler struct {
 }
 
 func (sh *SafeHandler) OnConnect(socket ISocket) {
-	log.Println("CONNECT:", socket.GetRemoteAddr(), socket.GetId())
 	sh.ConnectC <- socket
 }
 
 func (sh *SafeHandler) OnClose(socket ISocket) {
 	if socket.GetId() == 0 {
-		log.Println("CLOSE:", socket.GetRemoteAddr(), "0")
+		log.Println("CLOSE:", socket.GetRemoteIP(), "0")
 	} else {
 		sh.CloseC <- socket
 	}

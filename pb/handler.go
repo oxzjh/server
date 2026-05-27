@@ -64,7 +64,7 @@ func (h *Handler) Reg(p IProtobuf, f func(server.ISocket, IProtobuf) IProtobuf) 
 func NewHandler() *Handler {
 	return &Handler{
 		OnPanic: func(socket server.ISocket, protocol int16, err any) {
-			log.Println("PANIC:", socket.GetRemoteAddr(), socket.GetId(), protocol, err)
+			log.Println("PANIC:", socket.GetRemoteIP(), socket.GetId(), protocol, err)
 			log.Writer().Write(debug.Stack())
 		},
 		register: map[int16]*protobuf{},

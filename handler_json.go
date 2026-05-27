@@ -61,7 +61,7 @@ func (jh *JsonHandler) Reg(method string, h func(ISocket, Map) IJsonResponse) {
 func NewJsonHandler() *JsonHandler {
 	return &JsonHandler{
 		OnPanic: func(socket ISocket, method string, err any) {
-			log.Println("PANIC:", socket.GetRemoteAddr(), socket.GetId(), err)
+			log.Println("PANIC:", socket.GetRemoteIP(), socket.GetId(), err)
 			log.Writer().Write(debug.Stack())
 		},
 		register: map[string]func(ISocket, Map) IJsonResponse{},

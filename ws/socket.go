@@ -42,7 +42,7 @@ func (s *socket) Write(data []byte) {
 		return
 	}
 	if len(s.sendC) == cap(s.sendC) {
-		log.Println("ERROR:", s.GetRemoteAddr(), "channel full")
+		log.Println("ERROR:", s.GetRemoteIP(), "channel full")
 		s.Close()
 		return
 	}

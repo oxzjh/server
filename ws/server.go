@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -28,6 +29,14 @@ func (ws *wsServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			conn.SetReadLimit(ws.opts.readLimit)
 		}
 		s := &socket{conn: conn, sendC: make(chan []byte, ws.opts.sendCap)}
+		if s.remoteIP = r.Header.Get("X-Real-Ip"); s.remoteIP == "" {
+			for _, ip := range strings.Split(r.Header.Get("X-Forwarded-For"), ",") {
+				if ip != "" {
+					s.remoteIP = ip
+					break
+				}
+			}
+		}
 		go func() {
 			ws.AddSocket(s, id)
 			s.read(ws)

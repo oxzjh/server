@@ -22,7 +22,7 @@ func (s *socket) read(ts *tcpServer) {
 		err = ts.UpgradeSocket(s, message)
 	}
 	if err != nil {
-		log.Println("UPGRADE:", s.GetRemoteAddr(), err)
+		log.Println("UPGRADE:", s.GetRemoteIP(), err)
 		s.Close()
 		return
 	}
