@@ -2,7 +2,6 @@ package ws
 
 import (
 	"log"
-	"net"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -65,8 +64,5 @@ func (s *socket) GetRemoteAddr() string {
 }
 
 func (s *socket) GetRemoteIP() string {
-	if s.remoteIP == "" {
-		s.remoteIP = s.conn.RemoteAddr().(*net.TCPAddr).IP.String()
-	}
 	return s.remoteIP
 }

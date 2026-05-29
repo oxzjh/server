@@ -19,31 +19,34 @@ type wsServer struct {
 }
 
 func (ws *wsServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	remoteIP := r.Header.Get("X-Real-Ip")
+	if remoteIP == "" {
+		for _, remoteIP = range strings.Split(r.Header.Get("X-Forwarded-For"), ",") {
+			if remoteIP != "" {
+				break
+			}
+		}
+	}
+	if remoteIP == "" {
+		remoteIP = strings.Split(r.RemoteAddr, ":")[0]
+	}
 	id, err := ws.Upgrade(r.RequestURI[1:])
 	if id == 0 || err != nil {
-		log.Println("UPGRADE:", r.RemoteAddr, err)
+		log.Println("UPGRADE:", remoteIP, err)
 		return
 	}
 	if conn, err := ws.upgrader.Upgrade(w, r, nil); err == nil {
 		if ws.opts.readLimit > 0 {
 			conn.SetReadLimit(ws.opts.readLimit)
 		}
-		s := &socket{conn: conn, sendC: make(chan []byte, ws.opts.sendCap)}
-		if s.remoteIP = r.Header.Get("X-Real-Ip"); s.remoteIP == "" {
-			for _, ip := range strings.Split(r.Header.Get("X-Forwarded-For"), ",") {
-				if ip != "" {
-					s.remoteIP = ip
-					break
-				}
-			}
-		}
+		s := &socket{conn: conn, sendC: make(chan []byte, ws.opts.sendCap), remoteIP: remoteIP}
 		go func() {
 			ws.AddSocket(s, id)
 			s.read(ws)
 		}()
 		go s.write()
 	} else {
-		log.Println("UPGRADE:", r.RemoteAddr, err)
+		log.Println("UPGRADE:", remoteIP, err)
 	}
 }
 
