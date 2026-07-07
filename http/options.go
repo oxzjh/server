@@ -80,3 +80,12 @@ func WithAuth(a auth.IAuth, ignores ...string) Option {
 		}
 	}
 }
+
+func WithWhiteIP(ips ...string) Option {
+	return func(s *httpServer) {
+		s.whiteIPs = make(map[string]struct{}, len(ips))
+		for _, ip := range ips {
+			s.whiteIPs[ip] = struct{}{}
+		}
+	}
+}

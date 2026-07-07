@@ -33,5 +33,5 @@ func getIP(r *http.Request) string {
 			return ip
 		}
 	}
-	return r.RemoteAddr[:strings.IndexByte(r.RemoteAddr, ':')]
+	return r.RemoteAddr[:strings.LastIndexByte(r.RemoteAddr, ':')]
 }

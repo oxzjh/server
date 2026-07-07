@@ -27,6 +27,7 @@ type httpServer struct {
 	group        *rate.Group
 	auth         auth.IAuth
 	authIgnores  map[string]struct{}
+	whiteIPs     map[string]struct{}
 	handlers     map[string]Handler
 }
 
@@ -81,6 +82,13 @@ func (s *httpServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			}
 		}()
+		if len(s.whiteIPs) > 0 {
+			if _, ok := s.whiteIPs[c.GetIP()]; !ok {
+				log.Println(c.GetIP(), r.RequestURI, "INVALID IP")
+				http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+				return
+			}
+		}
 		if s.group != nil && !s.group.Allow(c.GetIP()) {
 			log.Println(c.GetIP(), r.RequestURI, "LIMITED")
 			http.Error(w, http.StatusText(http.StatusTooManyRequests), http.StatusTooManyRequests)
