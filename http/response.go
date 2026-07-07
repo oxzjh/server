@@ -157,6 +157,6 @@ func (r *responseCustom) Write(w http.ResponseWriter, _ Interceptor) {
 	r.callback(w)
 }
 
-func NewCuston(callback func(http.ResponseWriter)) IResponse {
+func NewCustom(callback func(http.ResponseWriter)) IResponse {
 	return &responseCustom{callback}
 }
