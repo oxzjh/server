@@ -14,7 +14,6 @@ type IServer interface {
 	GetSocket(uint64) ISocket
 	CloseSocket(ISocket)
 	GetCount() int
-	EnterRoom(ISocket, uint64)
 	ClearRoom(uint64)
 	SetSlow(time.Duration)
 	SetRate(time.Duration, int)
@@ -59,15 +58,11 @@ func (s *Server) GetCount() int {
 	return len(s.sockets)
 }
 
-func (*Server) EnterRoom(socket ISocket, rid uint64) {
-	socket.SetRid(rid)
-}
-
 func (s *Server) ClearRoom(rid uint64) {
 	s.RLock()
 	for _, socket := range s.sockets {
 		if socket.GetRid() == rid {
-			socket.SetRid(0)
+			socket.SetRoom(0, "")
 		}
 	}
 	s.RUnlock()
