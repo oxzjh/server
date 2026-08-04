@@ -14,12 +14,14 @@ var (
 	ErrSignError = errors.New("sign error")
 )
 
-func NewToken(data []byte, expire time.Duration, secret []byte) string {
+func NewToken(data []byte, expire uint32, secret []byte) string {
 	n := len(data)
-	b := make([]byte, n+8)
+	b := make([]byte, n+12)
 	copy(b, data)
-	binary.BigEndian.PutUint32(b[n:], uint32(time.Now().Add(expire).Unix()))
-	binary.BigEndian.PutUint32(b[n+4:], crc32.ChecksumIEEE(append(secret, b[:n+4]...)))
+	now := uint32(time.Now().Unix())
+	binary.LittleEndian.PutUint32(b[n:], now)
+	binary.LittleEndian.PutUint32(b[n+4:], now+expire)
+	binary.LittleEndian.PutUint32(b[n+8:], crc32.ChecksumIEEE(append(secret, b[:n+8]...)))
 	return base64.URLEncoding.EncodeToString(b)
 }
 
@@ -28,20 +30,21 @@ func ParseToken(token string, secret []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	n := len(b) - 8
+	n := len(b) - 12
 	if n < 0 {
 		return nil, ErrNotToken
 	}
-	if binary.BigEndian.Uint32(b[n:]) < uint32(time.Now().Unix()) {
+	now := uint32(time.Now().Unix())
+	if binary.LittleEndian.Uint32(b[n:]) > now || binary.LittleEndian.Uint32(b[n+4:]) < now {
 		return nil, ErrExpired
 	}
-	if crc32.ChecksumIEEE(append(secret, b[:n+4]...)) != binary.BigEndian.Uint32(b[n+4:]) {
+	if crc32.ChecksumIEEE(append(secret, b[:n+8]...)) != binary.LittleEndian.Uint32(b[n+8:]) {
 		return nil, ErrSignError
 	}
 	return b[:n], nil
 }
 
-func NewUintToken(uid uint64, expire time.Duration, secret []byte) string {
+func NewUintToken(uid uint64, expire uint32, secret []byte) string {
 	b := make([]byte, binary.MaxVarintLen64)
 	n := binary.PutUvarint(b, uid)
 	return NewToken(b[:n], expire, secret)
