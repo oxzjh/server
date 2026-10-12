@@ -95,7 +95,7 @@ func (s *httpServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if s.auth != nil {
-			if _, ok := s.authIgnores[r.RequestURI]; !ok {
+			if _, ok := s.authIgnores[r.URL.Path]; !ok {
 				token := r.Header.Get("token")
 				if token == "" && r.Method == http.MethodGet {
 					ParseQuery(c)
