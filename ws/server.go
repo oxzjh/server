@@ -66,9 +66,10 @@ func NewServer(a auth.IAuth, h server.IHandler, opts ...Option) server.IServer {
 		sendCap:           128,
 		timeout:           5 * time.Minute,
 		readHeaderTimeout: 5 * time.Second,
+		checkOrigin:       func(r *http.Request) bool { return true },
 	}
 	for _, opt := range opts {
 		opt(os)
 	}
-	return &wsServer{*server.New(a, h), &websocket.Upgrader{CheckOrigin: func(*http.Request) bool { return true }}, os}
+	return &wsServer{*server.New(a, h), &websocket.Upgrader{CheckOrigin: os.checkOrigin}, os}
 }

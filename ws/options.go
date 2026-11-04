@@ -1,6 +1,9 @@
 package ws
 
-import "time"
+import (
+	"net/http"
+	"time"
+)
 
 type options struct {
 	cert              string
@@ -9,6 +12,7 @@ type options struct {
 	sendCap           int
 	timeout           time.Duration
 	readHeaderTimeout time.Duration
+	checkOrigin       func(*http.Request) bool
 }
 
 type Option func(*options)
@@ -41,5 +45,11 @@ func WithTimeout(timeout time.Duration) Option {
 func WithReadHeaderTimeout(timeout time.Duration) Option {
 	return func(o *options) {
 		o.readHeaderTimeout = timeout
+	}
+}
+
+func WithCheckOrigin(f func(*http.Request) bool) Option {
+	return func(o *options) {
+		o.checkOrigin = f
 	}
 }
