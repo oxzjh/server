@@ -55,6 +55,8 @@ func (s *Server) CloseSocket(socket ISocket) {
 }
 
 func (s *Server) GetCount() int {
+	s.RLock()
+	defer s.RUnlock()
 	return len(s.sockets)
 }
 
