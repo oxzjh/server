@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/oxzjh/server/auth"
+	"github.com/oxzjh/server/ip"
 	"github.com/oxzjh/server/rate"
 )
 
@@ -87,5 +88,11 @@ func WithWhiteIP(ips ...string) Option {
 		for _, ip := range ips {
 			s.whiteIPs[ip] = struct{}{}
 		}
+	}
+}
+
+func WithParser(parser *ip.Parser) Option {
+	return func(s *httpServer) {
+		s.ipParser = parser
 	}
 }

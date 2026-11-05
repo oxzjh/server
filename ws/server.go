@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/oxzjh/server"
 	"github.com/oxzjh/server/auth"
+	"github.com/oxzjh/server/ip"
 )
 
 type wsServer struct {
@@ -19,17 +19,7 @@ type wsServer struct {
 }
 
 func (ws *wsServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	remoteIP := r.Header.Get("X-Real-Ip")
-	if remoteIP == "" {
-		for _, remoteIP = range strings.Split(r.Header.Get("X-Forwarded-For"), ",") {
-			if remoteIP != "" {
-				break
-			}
-		}
-	}
-	if remoteIP == "" {
-		remoteIP = strings.Split(r.RemoteAddr, ":")[0]
-	}
+	remoteIP := ws.opts.ipParser.Parse(r)
 	id, err := ws.Upgrade(r.RequestURI[1:])
 	if id == 0 || err != nil {
 		log.Println("UPGRADE:", remoteIP, err)
@@ -70,6 +60,9 @@ func NewServer(a auth.IAuth, h server.IHandler, opts ...Option) server.IServer {
 	}
 	for _, opt := range opts {
 		opt(os)
+	}
+	if os.ipParser == nil {
+		os.ipParser, _ = ip.NewParser(nil)
 	}
 	return &wsServer{*server.New(a, h), &websocket.Upgrader{CheckOrigin: os.checkOrigin}, os}
 }

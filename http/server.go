@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/oxzjh/server/auth"
+	"github.com/oxzjh/server/ip"
 	"github.com/oxzjh/server/rate"
 )
 
@@ -25,6 +26,7 @@ type httpServer struct {
 	cert         string
 	key          string
 	group        *rate.Group
+	ipParser     *ip.Parser
 	auth         auth.IAuth
 	authIgnores  map[string]struct{}
 	whiteIPs     map[string]struct{}
@@ -51,6 +53,13 @@ func (s *httpServer) AuthIgnore(ignores ...string) {
 	}
 }
 
+func (s *httpServer) GenToken(uid uint64, expire uint32) string {
+	if s.auth != nil {
+		return s.auth.NewUintToken(uid, expire)
+	}
+	return ""
+}
+
 func (s *httpServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if s.domains != nil {
 		if len(s.domains) == 1 {
@@ -75,7 +84,7 @@ func (s *httpServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if handler, ok := s.handlers[r.URL.Path]; ok {
-		c := &Context{Request: r}
+		c := &Context{Request: r, ipParser: s.ipParser}
 		defer func() {
 			if e := recover(); e != nil {
 				s.onPanic(c, e)
@@ -142,7 +151,7 @@ func (s *httpServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			response.Write(w, s.interceptor)
 		}
 	} else {
-		log.Println(getIP(r), r.RequestURI, "NOT FOUND")
+		log.Println(s.ipParser.Parse(r), r.RequestURI, "NOT FOUND")
 		s.onNotFound(w, r)
 	}
 }
@@ -173,13 +182,16 @@ func NewServer(opts ...Option) IServer {
 		maxLength:  0xFFFF,
 		onNotFound: http.NotFound,
 		onPanic: func(c *Context, e any) {
-			log.Println(getIP(c.Request), c.Request.RequestURI, e)
+			log.Println(c.GetIP(), c.Request.RequestURI, e)
 			log.Writer().Write(debug.Stack())
 		},
 		handlers: map[string]Handler{},
 	}
 	for _, opt := range opts {
 		opt(s)
+	}
+	if s.ipParser == nil {
+		s.ipParser, _ = ip.NewParser(nil)
 	}
 	return s
 }

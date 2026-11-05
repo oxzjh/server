@@ -3,6 +3,8 @@ package ws
 import (
 	"net/http"
 	"time"
+
+	"github.com/oxzjh/server/ip"
 )
 
 type options struct {
@@ -12,6 +14,7 @@ type options struct {
 	sendCap           int
 	timeout           time.Duration
 	readHeaderTimeout time.Duration
+	ipParser          *ip.Parser
 	checkOrigin       func(*http.Request) bool
 }
 
@@ -45,6 +48,12 @@ func WithTimeout(timeout time.Duration) Option {
 func WithReadHeaderTimeout(timeout time.Duration) Option {
 	return func(o *options) {
 		o.readHeaderTimeout = timeout
+	}
+}
+
+func WithParser(parser *ip.Parser) Option {
+	return func(o *options) {
+		o.ipParser = parser
 	}
 }
 
